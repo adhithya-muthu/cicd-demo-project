@@ -1,4 +1,4 @@
-name: Basic CI/CD Pipeline
+name: Basic CI/CD Pipeline (DevSecOps)
 
 on:
   push:
@@ -7,7 +7,35 @@ on:
     branches: [main]
 
 jobs:
+
+  security-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Secret Detection (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  sast-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Bandit (SAST tool)
+        run: pip install bandit
+
+      - name: Run Bandit SAST Scan
+        run: bandit -r app.py
+
   build-and-test:
+    needs: [security-scan, sast-scan]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
@@ -29,4 +57,4 @@ jobs:
     if: github.ref == 'refs/heads/main'
     steps:
       - name: Simulate Deployment
-        run: echo "All tests passed. Deploying to production..."
+        run: echo "All tests passed. Security checks passed. Deploying to production..."
